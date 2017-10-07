@@ -1,10 +1,10 @@
-## 3.0.6
+## 3.0.5
   - Fix some documentation issues
 
-## 3.0.5
+## 3.0.4
   - No user impact: bump development/testing dependency 'gelf' to v3.0.0
 
-## 3.0.4
+## 3.0.3
   - Docs: Update doc examples to use new event API syntax 
 
 ## 3.0.2
