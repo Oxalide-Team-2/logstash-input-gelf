@@ -30,3 +30,4 @@ Gem::Specification.new do |s|
   s.add_development_dependency "gelf", ["3.0.0"]                  #(MIT license)
   s.add_development_dependency "flores"
 end
+

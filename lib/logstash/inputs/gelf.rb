@@ -33,13 +33,22 @@ class LogStash::Inputs::Gelf < LogStash::Inputs::Base
   # ports) may require root to use.
   config :port, :validate => :number, :default => 12201
 
+  # The GELF protocol (TCP or UDP).
+  config :protocol, :validate => [ "UDP", "TCP" ], :default => "UDP"
+
+  # Whether to capture the hostname or numeric address of the incoming connection
+  # in protocol tcp.
+  #
+  # Defaults to hostname
+  config :use_numeric_client_addr, :validate => :boolean, :default => false
+
   # Whether or not to remap the GELF message fields to Logstash event fields or
   # leave them intact.
   #
   # Remapping converts the following GELF fields to Logstash equivalents:
   #
-  # * `full\_message` becomes `event.get("message")`.
-  # * if there is no `full\_message`, `short\_message` becomes `event.get("message")`.
+  # * `full\_message` becomes `event["message"]`.
+  # * if there is no `full\_message`, `short\_message` becomes `event["message"]`.
   config :remap, :validate => :boolean, :default => true
 
   # Whether or not to remove the leading `\_` in GELF fields or leave them
@@ -73,8 +82,12 @@ class LogStash::Inputs::Gelf < LogStash::Inputs::Base
   public
   def run(output_queue)
     begin
-      # udp server
+      # udp/tcp server
+      if @protocol.downcase == "tcp"
+        tcp_listener(output_queue)
+      else
       udp_listener(output_queue)
+      end
     rescue => e
       unless stop?
         @logger.warn("gelf listener died", :exception => e, :backtrace => e.backtrace)
@@ -86,13 +99,80 @@ class LogStash::Inputs::Gelf < LogStash::Inputs::Base
 
   public
   def stop
+    if @protocol.downcase == "tcp"
+      @tcp.close
+    else
     @udp.close
+    end
   rescue IOError # the plugin is currently shutting down, so its safe to ignore theses errors
   end
 
   private
+  def tcp_listener(output_queue)
+    @logger.info("Starting gelf listener (tcp) ...", :address => "#{@host}:#{@port}")
+
+    if @tcp.nil?
+      @tcp = TCPServer.new(@host, @port)
+    end
+
+    while !stop?
+      Thread.new(@tcp.accept) do |client|
+        @logger.debug? && @logger.debug("Gelf (tcp): Accepting connection from:  #{client.peeraddr[2]}:#{client.peeraddr[1]}")
+
+        begin
+          while !client.nil? && !client.eof?
+
+            begin # Read from socket
+              @data_in = client.gets("\u0000")
+            rescue => ex
+              @logger.warn("Gelf (tcp): failed gets from client socket:", :exception => ex, :backtrace => ex.backtrace)
+            end
+
+             if @data_in.nil?
+              @logger.warn("Gelf (tcp): socket read succeeded, but data is nil.  Skipping.")
+              next
+            end
+
+            # data received.  Remove trailing \0
+            @data_in[-1] == "\u0000" && @data_in = @data_in[0...-1]
+            source_host = @use_numeric_client_address && client.addr(:numeric)[3] || client.addr(:hostname)[3]
+            begin # Parse JSON to event
+              event = self.class.new_event(@data_in, source_host)
+            rescue => ex
+              @logger.warn("Gelf (tcp): failed to parse a message. Skipping: " + @data_in, :exception => ex, :backtrace => ex.backtrace)
+              next
+            end
+
+            begin  # Create event
+              event.remove("source_host")
+              remap_gelf(event) if @remap
+              strip_leading_underscore(event) if @strip_leading_underscore
+              decorate(event)
+              output_queue << event
+            rescue => ex
+              @logger.warn("Gelf (tcp): failed to create event from json object. Skipping: " + event, :exception => ex, :backtrace => ex.backtrace)
+            end
+
+          end # while client
+          @logger.debug? && @logger.debug("Gelf (tcp): Closing client connection")
+          client.close
+          client = nil
+        rescue => ex
+          @logger.warn("Gelf (tcp): client socket failed.", :exception => ex, :backtrace => ex.backtrace)
+        ensure
+          if !client.nil?
+            @logger.debug? && @logger.debug("Gelf (tcp): Ensuring client is closed")
+            client.close
+            client = nil
+          end
+        end # begin client
+      end  # Thread.new
+    end # @shutdown_requested
+  end # def tcp_listener
+
+  private
   def udp_listener(output_queue)
-    @logger.info("Starting gelf listener", :address => "#{@host}:#{@port}")
+    @logger.info("Starting gelf listener (udp)", :address => "#{@host}:#{@port}")
 
     @udp = UDPSocket.new(Socket::AF_INET)
     @udp.bind(@host, @port)
@@ -129,9 +209,9 @@ class LogStash::Inputs::Gelf < LogStash::Inputs::Base
     event = parse(json_gelf)
     return if event.nil?
 
-    event.set(SOURCE_HOST_FIELD, host)
+    event[SOURCE_HOST_FIELD] = host
 
-    if (gelf_timestamp = event.get(TIMESTAMP_GELF_FIELD)).is_a?(Numeric)
+    if (gelf_timestamp = event[TIMESTAMP_GELF_FIELD]).is_a?(Numeric)
       event.timestamp = self.coerce_timestamp(gelf_timestamp)
       event.remove(TIMESTAMP_GELF_FIELD)
     end
@@ -150,9 +230,7 @@ class LogStash::Inputs::Gelf < LogStash::Inputs::Base
 
   # from_json_parse uses the Event#from_json method to deserialize and directly produce events
   def self.from_json_parse(json)
-    # from_json will always return an array of item.
-    # in the context of gelf, the payload should be an array of 1
-    LogStash::Event.from_json(json).first
+    LogStash::Event.from_json(json).each { |event| event }
   rescue LogStash::Json::ParserError => e
     logger.error(PARSE_FAILURE_LOG_MESSAGE, :error => e, :data => json)
     LogStash::Event.new(MESSAGE_FIELD => json, TAGS_FIELD => [PARSE_FAILURE_TAG, '_fromjsonparser'])
@@ -161,7 +239,7 @@ class LogStash::Inputs::Gelf < LogStash::Inputs::Base
   # legacy_parse uses the LogStash::Json class to deserialize json
   def self.legacy_parse(json)
     o = LogStash::Json.load(json)
-    LogStash::Event.new(o)
+    LogStash::Event.new(o) if o
   rescue LogStash::Json::ParserError => e
     logger.error(PARSE_FAILURE_LOG_MESSAGE, :error => e, :data => json)
     LogStash::Event.new(MESSAGE_FIELD => json, TAGS_FIELD => [PARSE_FAILURE_TAG, '_legacyjsonparser'])
@@ -175,14 +253,14 @@ class LogStash::Inputs::Gelf < LogStash::Inputs::Base
 
   private
   def remap_gelf(event)
-    if event.get("full_message") && !event.get("full_message").empty?
-      event.set("message", event.get("full_message").dup)
+    if event["full_message"] && !event["full_message"].empty?
+      event["message"] = event["full_message"].dup
       event.remove("full_message")
-      if event.get("short_message") == event.get("message")
+      if event["short_message"] == event["message"]
         event.remove("short_message")
       end
-    elsif event.get("short_message") && !event.get("short_message").empty?
-      event.set("message", event.get("short_message").dup)
+    elsif event["short_message"]  && !event["short_message"].empty?
+      event["message"] = event["short_message"].dup
       event.remove("short_message")
     end
   end # def remap_gelf
@@ -192,7 +270,7 @@ class LogStash::Inputs::Gelf < LogStash::Inputs::Base
      # Map all '_foo' fields to simply 'foo'
      event.to_hash.keys.each do |key|
        next unless key[0,1] == "_"
-       event.set(key[1..-1], event.get(key))
+       event[key[1..-1]] = event[key]
        event.remove(key)
      end
   end # deef removing_leading_underscores
