@@ -1,0 +1,1779 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Code Climate Report for code</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.6.0/components/prism-core.min.js" data-manual></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.6.0/components/prism-clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.6.0/plugins/line-numbers/prism-line-numbers.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.6.0/plugins/line-highlight/prism-line-highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.6.0/components/prism-lock.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.6.0/components/prism-ruby.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.6.0/themes/prism.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.6.0/plugins/line-numbers/prism-line-numbers.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.6.0/plugins/line-highlight/prism-line-highlight.min.css" />
+    <script>
+      /**
+       * Report JS
+       */
+
+      (function(){
+        Prism.hooks.add('complete', function(env) {
+          var pre = env.element.parentNode;
+          var lines = pre && pre.dataset.line;
+
+          if (!pre || !lines || !/pre/i.test(pre.nodeName)) {
+            console.log('nope');
+            return;
+          }
+
+          var container = pre.parentElement;
+
+          if (!container || !container.classList.contains('code')) {
+            return;
+          }
+
+          console.log('collapsing', container);
+          container.style.height = 'auto';
+        });
+      })();
+
+      jQuery(function(){
+        function isVisible(element) {
+          return !!(
+            element.offsetWidth ||
+            element.offsetHeight ||
+            element.getClientRects().length
+          );
+        };
+
+        var pendingElements = [];
+        // Convert node list to arrays
+        pendingElements.push.apply(
+          pendingElements,
+          document.querySelectorAll('#smells .code')
+        );
+
+        var waypoints = [];
+
+        function updateInView() {
+          if (!pendingElements.length) {
+            return;
+          }
+
+          var visibleElements = pendingElements.filter(isVisible);
+          waypoints = visibleElements.map(function(element){
+            var $e = $(element),
+            elementTop = $e.offset().top;
+            return [
+              elementTop,
+              elementTop + $e.outerHeight(),
+              element
+            ];
+          });
+        };
+
+        function inView() {
+          var yTop = window.scrollY,
+          yBottom = window.scrollY + window.innerHeight;
+
+          return waypoints.filter(function(entry){
+            return (entry[0] <= yTop && entry[1] >= yTop) ||
+              (entry[0] > yTop && entry[1] < yBottom) ||
+              (entry[0] <= yBottom && entry[1] >= yBottom);
+          });
+        }
+
+        var inViewHandler = function(){
+          var entries = inView();
+          if (entries.length) {
+            entries.forEach(function(entry){
+              var containerElement = entry[2];
+
+              if (pendingElements.indexOf(containerElement) === -1) {
+                return;
+              }
+
+              element = containerElement.querySelector('pre code');
+
+              element.parentElement.style.visibility = 'visible';
+              Prism.highlightElement(element);
+
+              pendingElements.splice(
+                pendingElements.indexOf(containerElement),
+                1
+              );
+            });
+            updateInView();
+          }
+        };
+
+        function enableInView() {
+          window.addEventListener('scroll', inViewHandler);
+          window.addEventListener('resize', inViewHandler);
+          inViewHandler();
+        }
+
+        function disableInView() {
+          window.removeEventListener('scroll', inViewHandler);
+          window.removeEventListener('resize', inViewHandler);
+        }
+
+        updateInView();
+
+        function applyFilters() {
+          disableInView();
+          var category = $('#category-filter').val();
+          var engine = $('#engine-filter').val();
+          var list = document.getElementById('smells');
+          list.className = '';
+
+          var selector = '#smells li';
+
+          var suffix = '';
+          if (category !== '') {
+            list.classList.add('filter-category-' + category);
+          }
+          else {
+            list.classList.add('filter-category-all');
+          }
+          if (engine !== '') {
+            list.classList.add('filter-engine-' + engine);
+          }
+          else {
+            list.classList.add('filter-engine-all');
+          }
+
+          if (list.offsetHeight) {
+            $('#filtered-out-message').hide();
+
+            updateInView();
+            enableInView();
+          }
+          else {
+            $('#filtered-out-message').show();
+          }
+        }
+
+        $('#category-filter, #engine-filter').on('change', applyFilters);
+        applyFilters();
+
+        $('summary').on('click', function() {
+          setTimeout(function(){
+            updateInView();
+            inViewHandler();
+          },
+          1);
+        });
+      });
+    </script>
+    <style>
+      .filter-category-complexity > li,
+      .filter-category-duplication > li,
+      .filter-category-security > li,
+      .filter-category-style > li,
+      .filter-engine-bundler-audit > li,
+      .filter-engine-duplication > li,
+      .filter-engine-rubocop > li,
+      .filter-none > li {
+        display: none;
+      }
+
+      .filter-category-all.filter-engine-bundler-audit > li[data-engine="bundler-audit"],
+      .filter-category-all.filter-engine-duplication > li[data-engine="duplication"],
+      .filter-category-all.filter-engine-rubocop > li[data-engine="rubocop"],
+      .filter-category-complexity.filter-engine-all > li[data-categories~="complexity"],
+      .filter-category-duplication.filter-engine-all > li[data-categories~="duplication"],
+      .filter-category-security.filter-engine-all > li[data-categories~="security"],
+      .filter-category-style.filter-engine-all > li[data-categories~="style"],
+      .filter-category-all.filter-engine-all > li[data-categories~="all"][data-engine="all"],
+      .filter-category-all.filter-engine-bundler-audit > li[data-categories~="all"][data-engine="bundler-audit"],
+      .filter-category-all.filter-engine-duplication > li[data-categories~="all"][data-engine="duplication"],
+      .filter-category-all.filter-engine-rubocop > li[data-categories~="all"][data-engine="rubocop"],
+      .filter-category-complexity.filter-engine-all > li[data-categories~="complexity"][data-engine="all"],
+      .filter-category-complexity.filter-engine-bundler-audit > li[data-categories~="complexity"][data-engine="bundler-audit"],
+      .filter-category-complexity.filter-engine-duplication > li[data-categories~="complexity"][data-engine="duplication"],
+      .filter-category-complexity.filter-engine-rubocop > li[data-categories~="complexity"][data-engine="rubocop"],
+      .filter-category-duplication.filter-engine-all > li[data-categories~="duplication"][data-engine="all"],
+      .filter-category-duplication.filter-engine-bundler-audit > li[data-categories~="duplication"][data-engine="bundler-audit"],
+      .filter-category-duplication.filter-engine-duplication > li[data-categories~="duplication"][data-engine="duplication"],
+      .filter-category-duplication.filter-engine-rubocop > li[data-categories~="duplication"][data-engine="rubocop"],
+      .filter-category-security.filter-engine-all > li[data-categories~="security"][data-engine="all"],
+      .filter-category-security.filter-engine-bundler-audit > li[data-categories~="security"][data-engine="bundler-audit"],
+      .filter-category-security.filter-engine-duplication > li[data-categories~="security"][data-engine="duplication"],
+      .filter-category-security.filter-engine-rubocop > li[data-categories~="security"][data-engine="rubocop"],
+      .filter-category-style.filter-engine-all > li[data-categories~="style"][data-engine="all"],
+      .filter-category-style.filter-engine-bundler-audit > li[data-categories~="style"][data-engine="bundler-audit"],
+      .filter-category-style.filter-engine-duplication > li[data-categories~="style"][data-engine="duplication"],
+      .filter-category-style.filter-engine-rubocop > li[data-categories~="style"][data-engine="rubocop"],
+      .filter-category-all.filter-engine-all > li {
+        display: block;
+      }
+    </style>
+    <style>
+      /**
+      * prism.js Code Climate theme based on Coy theme
+      */
+
+      code[class*="language-"],
+      pre[class*="language-"] {
+        color: black;
+        font-family: Consolas, 'Bitstream Vera Sans Mono', Monaco, Courier, monospace;
+        direction: ltr;
+        text-align: left;
+        white-space: pre;
+        word-spacing: normal;
+        word-break: normal;
+        tab-size: 4;
+        hyphens: none;
+        font-size: 12px;
+      }
+
+      pre[class*="language-"] {
+        position:relative;
+        background-color: #fdfdfd;
+        background-image: linear-gradient(rgba(69, 142, 209, 0.0) 50%, rgba(69, 142, 209, 0.04) 50%);
+        background-size: 3em 3em;
+        background-origin: content-box;
+        overflow: hidden;
+        /*border: 1px solid #dde8ef;*/
+        margin-top: 1em;
+      }
+
+      pre > code[class*="language-"] {
+        display: block;
+        z-index: 100;
+      }
+
+      /* Inline code */
+      :not(pre) > code[class*="language-"] {
+        position:relative;
+        padding: .2em;
+        -webkit-border-radius: 0.3em;
+        -moz-border-radius: 0.3em;
+        -ms-border-radius: 0.3em;
+        -o-border-radius: 0.3em;
+        border-radius: 0.3em;
+      }
+
+      .token.comment,
+      .token.block-comment,
+      .token.prolog,
+      .token.doctype,
+      .token.cdata {
+        color: #999988;
+      }
+
+      .token.punctuation {
+        font-weight: bold;
+      }
+
+      .token.constant {
+        color: #555555
+      }
+
+      .token.symbol {
+        color: #990073;
+      }
+
+      .token.number {
+        color: #009999;
+      }
+
+      .token.property,
+      .token.tag,
+      .token.boolean,
+      .token.function-name,
+      .token.deleted {
+        color: #c92c2c;
+      }
+
+      .token.string {
+        color: #D14
+      }
+      .token.selector,
+      .token.attr-name,
+      .token.builtin,
+      .token.inserted {
+        color: #2f9c0a;
+      }
+
+      .token.variable {
+        color: #008080;
+      }
+
+      .token.operator {
+        font-weight: bold;
+      }
+
+      .token.entity,
+      .token.url {
+        color: #a67f59;
+      }
+
+      .token.keyword {
+        font-weight: bold;
+      }
+
+      .token.class-name {
+        color: #445588;
+        font-weight: bold;
+      }
+
+      .token.atrule,
+      .token.attr-value {
+        color: #1990b8;
+      }
+
+      .token.regex {
+        color: #808000;
+      }
+
+      .token.important {
+        color: #e90;
+      }
+
+      .style .token.string {
+        color: #a67f59;
+        background: rgba(255, 255, 255, 0.5);
+      }
+
+      .token.important {
+        font-weight: normal;
+      }
+
+      .token.entity {
+        cursor: help;
+      }
+
+      .namespace {
+        opacity: .7;
+      }
+
+      pre.line-numbers {
+        position: relative;
+        padding-left: 40px;
+        counter-reset: linenumber;
+      }
+
+      pre.line-numbers > code {
+        position: relative;
+        padding-left: 4px;
+      }
+
+      .line-numbers .line-numbers-rows {
+        position: absolute;
+        pointer-events: none;
+        top: 0;
+        font-size: 100%;
+        left: -3.8em;
+        width: 3.8em; /* works for line-numbers below 1000 lines */
+        letter-spacing: -1px;
+        padding-top: 1px;
+        user-select: none;
+        background-color: #f1f1f1;
+        color: #757575;
+      }
+
+      .line-numbers-rows > span {
+        pointer-events: none;
+        display: block;
+        counter-increment: linenumber;
+      }
+
+      .line-numbers-rows > span:before {
+        content: counter(linenumber);
+        color: #999;
+        display: block;
+        padding-right: 0.8em;
+        text-align: right;
+      }
+    </style>
+    <style>
+      /**
+       * Report styles
+       */
+
+      html, body {
+        font-size: 15px;
+        line-height: 1.333;
+        background: #f6f6f5;
+        color: #323543;
+        font-family: "BentonSans", helvetica, arial, sans-serif;
+        font-style: normal;
+        font-weight: normal;
+        min-width: 960px;
+        margin: 0;
+        padding: 0;
+      }
+      a {
+        color:#007dce;
+        text-decoration: none;
+      }
+      a:hover {
+        color:#005e9b;
+        text-decoration: underline;
+      }
+      .container {
+        width: 960px;
+        margin: 0 auto;
+      }
+      #top {
+        color: #fff;
+        background: #323543;
+          padding: 5px 0;
+      }
+      #logo {
+        background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22144%22%20height%3D%22144%22%20viewBox%3D%220%200%20144%20144%22%3E%3Cg%20fill%3D%22%23FFF%22%3E%3Cpath%20d%3D%22M93.548%2037.327L69.856%2061.02l14.09%2014.09%209.602-9.6%2027.243%2027.243%2014.09-14.092M65.483%2065.393l-14.03-14.03-35.78%2035.783-5.554%205.552%2014.09%2014.09%205.553-5.552%2018.14-18.138%203.55-3.552%2014.03%2014.028%2013.214%2013.216%2014.09-14.093-13.215-13.213%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E') center center no-repeat;
+        background-size: 35px 40px;
+        height: 40px;
+        width: 40px;
+        display: inline-block;
+        overflow: hidden;
+        text-indent: -99999px;
+        color: #fff;
+        vertical-align: middle;
+      }
+      #top h1 {
+        display: inline-block;
+        font-size: 16px;
+        font-weight: normal;
+        margin: 0;
+        vertical-align: middle;
+      }
+      #top h1::before {
+        content: '/ ';
+      }
+      nav ul, #smells {
+        margin: 0;
+        padding: 0;
+      }
+      nav li {
+        list-style: none;
+        padding: 10px 20px;
+        color: #5e637d;
+        position: relative;
+        display: inline-block;
+      }
+      nav li::after {
+        content: '';
+        position: absolute;
+        border-bottom: 8px solid #fff;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        bottom: 0px;
+        left: 50%;
+        margin-left: -8px;
+      }
+      #main-container {
+        background: #fff;
+        padding: 20px;
+        overflow: hidden;
+        position: relative;
+      }
+      .issue-filters {
+        float: right;
+        width: 200px;
+      }
+      .issue-filters label,
+      .issue-filters select {
+        display: block;
+        width: 100%;
+      }
+      .issue-filters label {
+        margin-top: 10px;
+      }
+      #smells {
+        max-width: 680px;
+      }
+      #smells > li {
+        list-style: none;
+        border-bottom: 1px solid #f6f6f5;
+        padding-top: 10px;
+        padding-bottom: 20px;
+      }
+      #smells > li:last-of-type {
+        border-bottom: 0px none;
+        padding-bottom: 0;
+      }
+      #smells > li > h2 {
+        font-weight: bold;
+        margin-top: 0;
+        font-size: inherit;
+      }
+
+      #smells .code {
+        position: relative;
+        overflow: hidden;
+        border-radius: 3px;
+        border: 1px solid #dde8ef;
+        height: 6em;
+        margin: 10px 0;
+      }
+      #smells .code > pre {
+        visibility: hidden;
+      }
+      #smells .code > pre,
+      #smells .code > pre .line-highlight {
+        margin-bottom: 0;
+        margin-top: 0;
+        padding-bottom: 0;
+        padding-top: 0;
+      }
+
+      .found-in {
+        font-size: 12px;
+        line-height: 20px;
+        color: #9999a1;
+        margin-top: 10px;
+        margin-bottom: 15px;
+      }
+      .found-in a {
+        color: #35b0ff;
+      }
+      ::-webkit-details-marker {display: none;}
+      details summary {
+        display: block;
+      }
+      details summary::before {
+        content: "► ";
+
+      }
+      details[open] summary::before {
+        content: "▼ ";
+      }
+
+      #filtered-out-message {
+        display: none;
+        text-align: center;
+        position: absolute;
+        left: 0;
+        width: 720px;
+        text-align: center;
+        top: 50%;
+        margin-top: -1em;
+        line-height: 2em;
+      }
+
+      #no-issues-message {
+        text-align: center;
+      }
+      #no-issues-message::before {
+        content: "🎉";
+        font-size: 3em;
+          display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <header id="top">
+      <div class="container">
+        <a id="logo" href="https://codeclimate.com/">Code Climate</a>
+        <h1>code</h1>
+      </div>
+    </header>
+    <div class="container">
+      <nav>
+        <ul>
+          <li>
+            Issues
+          </li>
+        </ul>
+      </nav>
+      <div id="main-container">
+
+          <div class="issue-filters">
+            <label for="category-filter">Category</label>
+            <select id="category-filter">
+              <option value="">All Categories</option>
+              <option value="complexity">Complexity</option>
+              <option value="duplication">Duplication</option>
+              <option value="security">Security</option>
+              <option value="style">Style</option>
+            </select>
+            <label for="engine-filter">Engine</label>
+            <select id="engine-filter">
+              <option value="">All Engines</option>
+              <option value="bundler-audit">bundler-audit</option>
+              <option value="duplication">duplication</option>
+              <option value="rubocop">rubocop</option>
+            </select>
+          </div>
+          <ul id="smells">
+            <li
+              data-categories="security"
+              data-engine="bundler-audit">
+              <h2>Minitar Directory Traversal Vulnerability</h2>
+              <div class="code">
+                <pre class="line-numbers language-lock"
+                     data-line="84"
+                     data-start="82"
+                     data-line-offset="81"><code>    manticore (0.6.1-java)
+    method_source (0.8.2)
+    minitar (0.5.4)
+    multi_json (1.12.2)
+    multipart-post (2.0.0)
+</code></pre>
+              </div>
+                <details>
+                  <summary>Details</summary>
+                  <p><strong>Advisory</strong>: CVE-2016-10173</p>
+
+<p><strong>URL</strong>: <a href="https://github.com/halostatue/minitar/issues/16" target="_blank">https://github.com/halostatue/minitar/issues/16</a></p>
+
+<p><strong>Solution</strong>: upgrade to &gt;= 0.6.1</p>
+                </details>
+              <div class="found-in">
+                Found in Gemfile.lock by
+                <a href="https://docs.codeclimate.com/docs/bundler-audit">bundler-audit</a>
+              </div>
+            </li>
+            <li
+              data-categories="security"
+              data-engine="bundler-audit">
+              <h2>Directory traversal vulnerability in rubyzip</h2>
+              <div class="code">
+                <pre class="line-numbers language-lock"
+                     data-line="117"
+                     data-start="115"
+                     data-line-offset="114"><code>      ruby-maven-libs (~&gt; 3.3.9)
+    ruby-maven-libs (3.3.9)
+    rubyzip (1.1.7)
+    sinatra (1.4.8)
+      rack (~&gt; 1.5)
+</code></pre>
+              </div>
+                <details>
+                  <summary>Details</summary>
+                  <p><strong>Advisory</strong>: CVE-2017-5946</p>
+
+<p><strong>URL</strong>: <a href="https://github.com/rubyzip/rubyzip/issues/315" target="_blank">https://github.com/rubyzip/rubyzip/issues/315</a></p>
+
+<p><strong>Solution</strong>: upgrade to &gt;= 1.2.1</p>
+                </details>
+              <div class="found-in">
+                Found in Gemfile.lock by
+                <a href="https://docs.codeclimate.com/docs/bundler-audit">bundler-audit</a>
+              </div>
+            </li>
+            <li
+              data-categories="duplication"
+              data-engine="duplication">
+              <h2>Similar code found in 1 other location (mass = 25)</h2>
+              <div class="code">
+                <pre class="line-numbers language-ruby"
+                     data-line="243-246"
+                     data-start="241"
+                     data-line-offset="240"><code>    # in the context of gelf, the payload should be an array of 1
+    LogStash::Event.from_json(json).first
+  rescue LogStash::Json::ParserError =&gt; e
+    logger.error(PARSE_FAILURE_LOG_MESSAGE, :error =&gt; e, :data =&gt; json)
+    LogStash::Event.new(MESSAGE_FIELD =&gt; json, TAGS_FIELD =&gt; [PARSE_FAILURE_TAG, &#39;_fromjsonparser&#39;])
+  end # def self.from_json_parse
+
+  # legacy_parse uses the LogStash::Json class to deserialize json
+</code></pre>
+              </div>
+
+                <details>
+                  <summary>Other instances</summary>
+                    <h4>lib/logstash/inputs/gelf.rb</h3>
+                    <div class="code">
+                      <pre class="line-numbers language-ruby"
+                           data-line="252-255"
+                           data-start="250"
+                           data-line-offset="249"><code>    o = LogStash::Json.load(json)
+    LogStash::Event.new(o) if o
+  rescue LogStash::Json::ParserError => e
+    logger.error(PARSE_FAILURE_LOG_MESSAGE, :error => e, :data => json)
+    LogStash::Event.new(MESSAGE_FIELD => json, TAGS_FIELD => [PARSE_FAILURE_TAG, '_legacyjsonparser'])
+  end # def self.parse
+
+  # keep compatibility with all v2.x distributions. only in 2.3 will the Event#from_json method be introduced
+</code></pre>
+                    </div>
+                </details>
+                <details>
+                  <summary>Details</summary>
+                  <h2>Duplicated Code</h2>
+
+<p>Duplicated code can lead to software that is hard to understand and difficult to change. The Don&#39;t Repeat Yourself (DRY) principle states:</p>
+
+<blockquote>
+<p>Every piece of knowledge must have a single, unambiguous, authoritative representation within a system.</p>
+</blockquote>
+
+<p>When you violate DRY, bugs and maintenance problems are sure to follow. Duplicated code has a tendency to both continue to replicate and also to diverge (leaving bugs as two similar implementations differ in subtle ways).</p>
+
+<h2>Tuning</h2>
+
+<p><strong>This issue has a mass of 25</strong>.</p>
+
+<p>We set useful threshold defaults for the languages we support but you may want to adjust these settings based on your project guidelines.</p>
+
+<p>The threshold configuration represents the minimum <a href="https://docs.codeclimate.com/docs/duplication#mass" target="_blank">mass</a> a code block must have to be analyzed for duplication. The lower the threshold, the more fine-grained the comparison.</p>
+
+<p>If the engine is too easily reporting duplication, try raising the threshold. If you suspect that the engine isn&#39;t catching enough duplication, try lowering the threshold. The best setting tends to differ from language to language.</p>
+
+<p>See <a href="https://docs.codeclimate.com/docs/duplication" target="_blank"><code>codeclimate-duplication</code>&#39;s documentation</a> for more information about tuning the mass threshold in your <code>.codeclimate.yml</code>.</p>
+
+<h2>Refactorings</h2>
+
+<ul>
+<li>  <a href="http://sourcemaking.com/refactoring/extract-method" target="_blank">Extract Method</a></li>
+<li>  <a href="http://sourcemaking.com/refactoring/extract-class" target="_blank">Extract Class</a></li>
+<li>  <a href="http://sourcemaking.com/refactoring/form-template-method" target="_blank">Form Template Method</a></li>
+<li>  <a href="http://sourcemaking.com/refactoring/introduce-null-object" target="_blank">Introduce Null Object</a></li>
+<li>  <a href="http://sourcemaking.com/refactoring/pull-up-method" target="_blank">Pull Up Method</a></li>
+<li>  <a href="http://sourcemaking.com/refactoring/pull-up-field" target="_blank">Pull Up Field</a></li>
+<li>  <a href="http://sourcemaking.com/refactoring/substitute-algorithm" target="_blank">Substitute Algorithm</a></li>
+</ul>
+
+<h2>Further Reading</h2>
+
+<ul>
+<li>  <a href="http://c2.com/cgi/wiki?DontRepeatYourself" target="_blank">Don&#39;t Repeat Yourself</a> on the C2 Wiki</li>
+<li>  <a href="http://sourcemaking.com/refactoring/duplicated-code" target="_blank">Duplicated Code</a> on SourceMaking</li>
+<li>  <a href="http://www.amazon.com/Refactoring-Improving-Design-Existing-Code/dp/0201485672" target="_blank">Refactoring: Improving the Design of Existing Code</a> by Martin Fowler. <em>Duplicated Code</em>, p76</li>
+</ul>
+                </details>
+              <div class="found-in">
+                Found in lib/logstash/inputs/gelf.rb by
+                <a href="https://docs.codeclimate.com/docs/duplication">duplication</a>
+              </div>
+            </li>
+            <li
+              data-categories="duplication"
+              data-engine="duplication">
+              <h2>Similar code found in 1 other location (mass = 25)</h2>
+              <div class="code">
+                <pre class="line-numbers language-ruby"
+                     data-line="252-255"
+                     data-start="250"
+                     data-line-offset="249"><code>    o = LogStash::Json.load(json)
+    LogStash::Event.new(o) if o
+  rescue LogStash::Json::ParserError =&gt; e
+    logger.error(PARSE_FAILURE_LOG_MESSAGE, :error =&gt; e, :data =&gt; json)
+    LogStash::Event.new(MESSAGE_FIELD =&gt; json, TAGS_FIELD =&gt; [PARSE_FAILURE_TAG, &#39;_legacyjsonparser&#39;])
+  end # def self.parse
+
+  # keep compatibility with all v2.x distributions. only in 2.3 will the Event#from_json method be introduced
+</code></pre>
+              </div>
+
+                <details>
+                  <summary>Other instances</summary>
+                    <h4>lib/logstash/inputs/gelf.rb</h3>
+                    <div class="code">
+                      <pre class="line-numbers language-ruby"
+                           data-line="243-246"
+                           data-start="241"
+                           data-line-offset="240"><code>    # in the context of gelf, the payload should be an array of 1
+    LogStash::Event.from_json(json).first
+  rescue LogStash::Json::ParserError => e
+    logger.error(PARSE_FAILURE_LOG_MESSAGE, :error => e, :data => json)
+    LogStash::Event.new(MESSAGE_FIELD => json, TAGS_FIELD => [PARSE_FAILURE_TAG, '_fromjsonparser'])
+  end # def self.from_json_parse
+
+  # legacy_parse uses the LogStash::Json class to deserialize json
+</code></pre>
+                    </div>
+                </details>
+                <details>
+                  <summary>Details</summary>
+                  <h2>Duplicated Code</h2>
+
+<p>Duplicated code can lead to software that is hard to understand and difficult to change. The Don&#39;t Repeat Yourself (DRY) principle states:</p>
+
+<blockquote>
+<p>Every piece of knowledge must have a single, unambiguous, authoritative representation within a system.</p>
+</blockquote>
+
+<p>When you violate DRY, bugs and maintenance problems are sure to follow. Duplicated code has a tendency to both continue to replicate and also to diverge (leaving bugs as two similar implementations differ in subtle ways).</p>
+
+<h2>Tuning</h2>
+
+<p><strong>This issue has a mass of 25</strong>.</p>
+
+<p>We set useful threshold defaults for the languages we support but you may want to adjust these settings based on your project guidelines.</p>
+
+<p>The threshold configuration represents the minimum <a href="https://docs.codeclimate.com/docs/duplication#mass" target="_blank">mass</a> a code block must have to be analyzed for duplication. The lower the threshold, the more fine-grained the comparison.</p>
+
+<p>If the engine is too easily reporting duplication, try raising the threshold. If you suspect that the engine isn&#39;t catching enough duplication, try lowering the threshold. The best setting tends to differ from language to language.</p>
+
+<p>See <a href="https://docs.codeclimate.com/docs/duplication" target="_blank"><code>codeclimate-duplication</code>&#39;s documentation</a> for more information about tuning the mass threshold in your <code>.codeclimate.yml</code>.</p>
+
+<h2>Refactorings</h2>
+
+<ul>
+<li>  <a href="http://sourcemaking.com/refactoring/extract-method" target="_blank">Extract Method</a></li>
+<li>  <a href="http://sourcemaking.com/refactoring/extract-class" target="_blank">Extract Class</a></li>
+<li>  <a href="http://sourcemaking.com/refactoring/form-template-method" target="_blank">Form Template Method</a></li>
+<li>  <a href="http://sourcemaking.com/refactoring/introduce-null-object" target="_blank">Introduce Null Object</a></li>
+<li>  <a href="http://sourcemaking.com/refactoring/pull-up-method" target="_blank">Pull Up Method</a></li>
+<li>  <a href="http://sourcemaking.com/refactoring/pull-up-field" target="_blank">Pull Up Field</a></li>
+<li>  <a href="http://sourcemaking.com/refactoring/substitute-algorithm" target="_blank">Substitute Algorithm</a></li>
+</ul>
+
+<h2>Further Reading</h2>
+
+<ul>
+<li>  <a href="http://c2.com/cgi/wiki?DontRepeatYourself" target="_blank">Don&#39;t Repeat Yourself</a> on the C2 Wiki</li>
+<li>  <a href="http://sourcemaking.com/refactoring/duplicated-code" target="_blank">Duplicated Code</a> on SourceMaking</li>
+<li>  <a href="http://www.amazon.com/Refactoring-Improving-Design-Existing-Code/dp/0201485672" target="_blank">Refactoring: Improving the Design of Existing Code</a> by Martin Fowler. <em>Duplicated Code</em>, p76</li>
+</ul>
+                </details>
+              <div class="found-in">
+                Found in lib/logstash/inputs/gelf.rb by
+                <a href="https://docs.codeclimate.com/docs/duplication">duplication</a>
+              </div>
+            </li>
+            <li
+              data-categories="style"
+              data-engine="rubocop">
+              <h2>`end` at 133, 12 is not aligned with `if` at 130, 13.</h2>
+              <div class="code">
+                <pre class="line-numbers language-ruby"
+                     data-line="133"
+                     data-start="131"
+                     data-line-offset="130"><code>              @logger.warn(&quot;Gelf (tcp): socket read succeeded, but data is nil.  Skipping.&quot;)
+              next
+            end
+           
+            # data received.  Remove trailing \0
+</code></pre>
+              </div>
+                <details>
+                  <summary>Details</summary>
+                  <p>This cop checks whether the end keywords are aligned properly.</p>
+
+<p>Three modes are supported through the <code>AlignWith</code> configuration
+parameter:</p>
+
+<p>If it&#39;s set to <code>keyword</code> (which is the default), the <code>end</code>
+shall be aligned with the start of the keyword (if, class, etc.).</p>
+
+<p>If it&#39;s set to <code>variable</code> the <code>end</code> shall be aligned with the
+left-hand-side of the variable assignment, if there is one.</p>
+
+<p>If it&#39;s set to <code>start_of_line</code>, the <code>end</code> shall be aligned with the
+start of the line where the matching keyword appears.</p>
+
+<h3>Example:</h3>
+
+<pre><code># good
+# keyword style
+variable = if true
+           end
+
+# variable style
+variable = if true
+end
+
+# start_of_line style
+puts(if true
+end)
+</code></pre>
+                </details>
+              <div class="found-in">
+                Found in lib/logstash/inputs/gelf.rb by
+                <a href="https://docs.codeclimate.com/docs/rubocop">rubocop</a>
+              </div>
+            </li>
+            <li
+              data-categories="style"
+              data-engine="rubocop">
+              <h2>Do not suppress exceptions.</h2>
+              <div class="code">
+                <pre class="line-numbers language-ruby"
+                     data-line="105"
+                     data-start="103"
+                     data-line-offset="102"><code>  def stop
+    @udp.close
+  rescue IOError # the plugin is currently shutting down, so its safe to ignore theses errors
+  end
+
+</code></pre>
+              </div>
+              <div class="found-in">
+                Found in lib/logstash/inputs/gelf.rb by
+                <a href="https://docs.codeclimate.com/docs/rubocop">rubocop</a>
+              </div>
+            </li>
+            <li
+              data-categories="style"
+              data-engine="rubocop">
+              <h2>Useless `public` access modifier.</h2>
+              <div class="code">
+                <pre class="line-numbers language-ruby"
+                     data-line="70"
+                     data-start="68"
+                     data-line-offset="67"><code>  config :use_numeric_client_addr, :validate =&gt; :boolean, :default =&gt; false
+
+  public
+  def initialize(params)
+    super
+</code></pre>
+              </div>
+                <details>
+                  <summary>Details</summary>
+                  <p>This cop checks for redundant access modifiers, including those with no
+code, those which are repeated, and leading <code>public</code> modifiers in a
+class or module body. Conditionally-defined methods are considered as
+always being defined, and thus access modifiers guarding such methods
+are not redundant.</p>
+
+<h3>Example:</h3>
+
+<pre><code>class Foo
+  public # this is redundant (default access is public)
+
+  def method
+  end
+
+  private # this is not redundant (a method is defined)
+  def method2
+  end
+
+  private # this is redundant (no following methods are defined)
+end
+</code></pre>
+
+<h3>Example:</h3>
+
+<pre><code>class Foo
+  # The following is not redundant (conditionally defined methods are
+  # considered as always defining a method)
+  private
+
+  if condition?
+    def method
+    end
+  end
+
+  protected # this is not redundant (method is defined)
+
+  define_method(:method2) do
+  end
+
+  protected # this is redundant (repeated from previous modifier)
+
+  [1,2,3].each do |i|
+    define_method(&quot;foo#{i}&quot;) do
+    end
+  end
+
+  # The following is redundant (methods defined on the class&#39;
+  # singleton class are not affected by the public modifier)
+  public
+
+  def self.method3
+  end
+end
+</code></pre>
+
+<h3>Example:</h3>
+
+<pre><code># Lint/UselessAccessModifier:
+#   ContextCreatingMethods:
+#     - concerning
+require &#39;active_support/concern&#39;
+class Foo
+  concerning :Bar do
+    def some_public_method
+    end
+
+    private
+
+    def some_private_method
+    end
+  end
+
+  # this is not redundant because `concerning` created its own context
+  private
+
+  def some_other_private_method
+  end
+end
+</code></pre>
+                </details>
+              <div class="found-in">
+                Found in lib/logstash/inputs/gelf.rb by
+                <a href="https://docs.codeclimate.com/docs/rubocop">rubocop</a>
+              </div>
+            </li>
+            <li
+              data-categories="style"
+              data-engine="rubocop">
+              <h2>Useless `public` access modifier.</h2>
+              <div class="code">
+                <pre class="line-numbers language-ruby"
+                     data-line="76"
+                     data-start="74"
+                     data-line-offset="73"><code>  end # def initialize
+
+  public
+  def register
+    require &#39;gelfd&#39;
+</code></pre>
+              </div>
+                <details>
+                  <summary>Details</summary>
+                  <p>This cop checks for redundant access modifiers, including those with no
+code, those which are repeated, and leading <code>public</code> modifiers in a
+class or module body. Conditionally-defined methods are considered as
+always being defined, and thus access modifiers guarding such methods
+are not redundant.</p>
+
+<h3>Example:</h3>
+
+<pre><code>class Foo
+  public # this is redundant (default access is public)
+
+  def method
+  end
+
+  private # this is not redundant (a method is defined)
+  def method2
+  end
+
+  private # this is redundant (no following methods are defined)
+end
+</code></pre>
+
+<h3>Example:</h3>
+
+<pre><code>class Foo
+  # The following is not redundant (conditionally defined methods are
+  # considered as always defining a method)
+  private
+
+  if condition?
+    def method
+    end
+  end
+
+  protected # this is not redundant (method is defined)
+
+  define_method(:method2) do
+  end
+
+  protected # this is redundant (repeated from previous modifier)
+
+  [1,2,3].each do |i|
+    define_method(&quot;foo#{i}&quot;) do
+    end
+  end
+
+  # The following is redundant (methods defined on the class&#39;
+  # singleton class are not affected by the public modifier)
+  public
+
+  def self.method3
+  end
+end
+</code></pre>
+
+<h3>Example:</h3>
+
+<pre><code># Lint/UselessAccessModifier:
+#   ContextCreatingMethods:
+#     - concerning
+require &#39;active_support/concern&#39;
+class Foo
+  concerning :Bar do
+    def some_public_method
+    end
+
+    private
+
+    def some_private_method
+    end
+  end
+
+  # this is not redundant because `concerning` created its own context
+  private
+
+  def some_other_private_method
+  end
+end
+</code></pre>
+                </details>
+              <div class="found-in">
+                Found in lib/logstash/inputs/gelf.rb by
+                <a href="https://docs.codeclimate.com/docs/rubocop">rubocop</a>
+              </div>
+            </li>
+            <li
+              data-categories="style"
+              data-engine="rubocop">
+              <h2>Useless `public` access modifier.</h2>
+              <div class="code">
+                <pre class="line-numbers language-ruby"
+                     data-line="83"
+                     data-start="81"
+                     data-line-offset="80"><code>  end # def register
+
+  public
+  def run(output_queue)
+    begin
+</code></pre>
+              </div>
+                <details>
+                  <summary>Details</summary>
+                  <p>This cop checks for redundant access modifiers, including those with no
+code, those which are repeated, and leading <code>public</code> modifiers in a
+class or module body. Conditionally-defined methods are considered as
+always being defined, and thus access modifiers guarding such methods
+are not redundant.</p>
+
+<h3>Example:</h3>
+
+<pre><code>class Foo
+  public # this is redundant (default access is public)
+
+  def method
+  end
+
+  private # this is not redundant (a method is defined)
+  def method2
+  end
+
+  private # this is redundant (no following methods are defined)
+end
+</code></pre>
+
+<h3>Example:</h3>
+
+<pre><code>class Foo
+  # The following is not redundant (conditionally defined methods are
+  # considered as always defining a method)
+  private
+
+  if condition?
+    def method
+    end
+  end
+
+  protected # this is not redundant (method is defined)
+
+  define_method(:method2) do
+  end
+
+  protected # this is redundant (repeated from previous modifier)
+
+  [1,2,3].each do |i|
+    define_method(&quot;foo#{i}&quot;) do
+    end
+  end
+
+  # The following is redundant (methods defined on the class&#39;
+  # singleton class are not affected by the public modifier)
+  public
+
+  def self.method3
+  end
+end
+</code></pre>
+
+<h3>Example:</h3>
+
+<pre><code># Lint/UselessAccessModifier:
+#   ContextCreatingMethods:
+#     - concerning
+require &#39;active_support/concern&#39;
+class Foo
+  concerning :Bar do
+    def some_public_method
+    end
+
+    private
+
+    def some_private_method
+    end
+  end
+
+  # this is not redundant because `concerning` created its own context
+  private
+
+  def some_other_private_method
+  end
+end
+</code></pre>
+                </details>
+              <div class="found-in">
+                Found in lib/logstash/inputs/gelf.rb by
+                <a href="https://docs.codeclimate.com/docs/rubocop">rubocop</a>
+              </div>
+            </li>
+            <li
+              data-categories="style"
+              data-engine="rubocop">
+              <h2>Useless `public` access modifier.</h2>
+              <div class="code">
+                <pre class="line-numbers language-ruby"
+                     data-line="102"
+                     data-start="100"
+                     data-line-offset="99"><code>  end # def run
+
+  public
+  def stop
+    @udp.close
+</code></pre>
+              </div>
+                <details>
+                  <summary>Details</summary>
+                  <p>This cop checks for redundant access modifiers, including those with no
+code, those which are repeated, and leading <code>public</code> modifiers in a
+class or module body. Conditionally-defined methods are considered as
+always being defined, and thus access modifiers guarding such methods
+are not redundant.</p>
+
+<h3>Example:</h3>
+
+<pre><code>class Foo
+  public # this is redundant (default access is public)
+
+  def method
+  end
+
+  private # this is not redundant (a method is defined)
+  def method2
+  end
+
+  private # this is redundant (no following methods are defined)
+end
+</code></pre>
+
+<h3>Example:</h3>
+
+<pre><code>class Foo
+  # The following is not redundant (conditionally defined methods are
+  # considered as always defining a method)
+  private
+
+  if condition?
+    def method
+    end
+  end
+
+  protected # this is not redundant (method is defined)
+
+  define_method(:method2) do
+  end
+
+  protected # this is redundant (repeated from previous modifier)
+
+  [1,2,3].each do |i|
+    define_method(&quot;foo#{i}&quot;) do
+    end
+  end
+
+  # The following is redundant (methods defined on the class&#39;
+  # singleton class are not affected by the public modifier)
+  public
+
+  def self.method3
+  end
+end
+</code></pre>
+
+<h3>Example:</h3>
+
+<pre><code># Lint/UselessAccessModifier:
+#   ContextCreatingMethods:
+#     - concerning
+require &#39;active_support/concern&#39;
+class Foo
+  concerning :Bar do
+    def some_public_method
+    end
+
+    private
+
+    def some_private_method
+    end
+  end
+
+  # this is not redundant because `concerning` created its own context
+  private
+
+  def some_other_private_method
+  end
+end
+</code></pre>
+                </details>
+              <div class="found-in">
+                Found in lib/logstash/inputs/gelf.rb by
+                <a href="https://docs.codeclimate.com/docs/rubocop">rubocop</a>
+              </div>
+            </li>
+            <li
+              data-categories="style"
+              data-engine="rubocop">
+              <h2>Useless `private` access modifier.</h2>
+              <div class="code">
+                <pre class="line-numbers language-ruby"
+                     data-line="180"
+                     data-start="178"
+                     data-line-offset="177"><code>  end
+
+  private
+  def udp_listener(output_queue)
+    @logger.info(&quot;Starting gelf listener (udp)&quot;, :address =&gt; &quot;#{@host}:#{@port}&quot;)
+</code></pre>
+              </div>
+                <details>
+                  <summary>Details</summary>
+                  <p>This cop checks for redundant access modifiers, including those with no
+code, those which are repeated, and leading <code>public</code> modifiers in a
+class or module body. Conditionally-defined methods are considered as
+always being defined, and thus access modifiers guarding such methods
+are not redundant.</p>
+
+<h3>Example:</h3>
+
+<pre><code>class Foo
+  public # this is redundant (default access is public)
+
+  def method
+  end
+
+  private # this is not redundant (a method is defined)
+  def method2
+  end
+
+  private # this is redundant (no following methods are defined)
+end
+</code></pre>
+
+<h3>Example:</h3>
+
+<pre><code>class Foo
+  # The following is not redundant (conditionally defined methods are
+  # considered as always defining a method)
+  private
+
+  if condition?
+    def method
+    end
+  end
+
+  protected # this is not redundant (method is defined)
+
+  define_method(:method2) do
+  end
+
+  protected # this is redundant (repeated from previous modifier)
+
+  [1,2,3].each do |i|
+    define_method(&quot;foo#{i}&quot;) do
+    end
+  end
+
+  # The following is redundant (methods defined on the class&#39;
+  # singleton class are not affected by the public modifier)
+  public
+
+  def self.method3
+  end
+end
+</code></pre>
+
+<h3>Example:</h3>
+
+<pre><code># Lint/UselessAccessModifier:
+#   ContextCreatingMethods:
+#     - concerning
+require &#39;active_support/concern&#39;
+class Foo
+  concerning :Bar do
+    def some_public_method
+    end
+
+    private
+
+    def some_private_method
+    end
+  end
+
+  # this is not redundant because `concerning` created its own context
+  private
+
+  def some_other_private_method
+  end
+end
+</code></pre>
+                </details>
+              <div class="found-in">
+                Found in lib/logstash/inputs/gelf.rb by
+                <a href="https://docs.codeclimate.com/docs/rubocop">rubocop</a>
+              </div>
+            </li>
+            <li
+              data-categories="style"
+              data-engine="rubocop">
+              <h2>Useless `private` access modifier.</h2>
+              <div class="code">
+                <pre class="line-numbers language-ruby"
+                     data-line="263"
+                     data-start="261"
+                     data-line-offset="260"><code>  end
+
+  private
+  def remap_gelf(event)
+    if event.get(&quot;full_message&quot;) &amp;&amp; !event.get(&quot;full_message&quot;).empty?
+</code></pre>
+              </div>
+                <details>
+                  <summary>Details</summary>
+                  <p>This cop checks for redundant access modifiers, including those with no
+code, those which are repeated, and leading <code>public</code> modifiers in a
+class or module body. Conditionally-defined methods are considered as
+always being defined, and thus access modifiers guarding such methods
+are not redundant.</p>
+
+<h3>Example:</h3>
+
+<pre><code>class Foo
+  public # this is redundant (default access is public)
+
+  def method
+  end
+
+  private # this is not redundant (a method is defined)
+  def method2
+  end
+
+  private # this is redundant (no following methods are defined)
+end
+</code></pre>
+
+<h3>Example:</h3>
+
+<pre><code>class Foo
+  # The following is not redundant (conditionally defined methods are
+  # considered as always defining a method)
+  private
+
+  if condition?
+    def method
+    end
+  end
+
+  protected # this is not redundant (method is defined)
+
+  define_method(:method2) do
+  end
+
+  protected # this is redundant (repeated from previous modifier)
+
+  [1,2,3].each do |i|
+    define_method(&quot;foo#{i}&quot;) do
+    end
+  end
+
+  # The following is redundant (methods defined on the class&#39;
+  # singleton class are not affected by the public modifier)
+  public
+
+  def self.method3
+  end
+end
+</code></pre>
+
+<h3>Example:</h3>
+
+<pre><code># Lint/UselessAccessModifier:
+#   ContextCreatingMethods:
+#     - concerning
+require &#39;active_support/concern&#39;
+class Foo
+  concerning :Bar do
+    def some_public_method
+    end
+
+    private
+
+    def some_private_method
+    end
+  end
+
+  # this is not redundant because `concerning` created its own context
+  private
+
+  def some_other_private_method
+  end
+end
+</code></pre>
+                </details>
+              <div class="found-in">
+                Found in lib/logstash/inputs/gelf.rb by
+                <a href="https://docs.codeclimate.com/docs/rubocop">rubocop</a>
+              </div>
+            </li>
+            <li
+              data-categories="style"
+              data-engine="rubocop">
+              <h2>Useless `private` access modifier.</h2>
+              <div class="code">
+                <pre class="line-numbers language-ruby"
+                     data-line="277"
+                     data-start="275"
+                     data-line-offset="274"><code>  end # def remap_gelf
+
+  private
+  def strip_leading_underscore(event)
+     # Map all &#39;_foo&#39; fields to simply &#39;foo&#39;
+</code></pre>
+              </div>
+                <details>
+                  <summary>Details</summary>
+                  <p>This cop checks for redundant access modifiers, including those with no
+code, those which are repeated, and leading <code>public</code> modifiers in a
+class or module body. Conditionally-defined methods are considered as
+always being defined, and thus access modifiers guarding such methods
+are not redundant.</p>
+
+<h3>Example:</h3>
+
+<pre><code>class Foo
+  public # this is redundant (default access is public)
+
+  def method
+  end
+
+  private # this is not redundant (a method is defined)
+  def method2
+  end
+
+  private # this is redundant (no following methods are defined)
+end
+</code></pre>
+
+<h3>Example:</h3>
+
+<pre><code>class Foo
+  # The following is not redundant (conditionally defined methods are
+  # considered as always defining a method)
+  private
+
+  if condition?
+    def method
+    end
+  end
+
+  protected # this is not redundant (method is defined)
+
+  define_method(:method2) do
+  end
+
+  protected # this is redundant (repeated from previous modifier)
+
+  [1,2,3].each do |i|
+    define_method(&quot;foo#{i}&quot;) do
+    end
+  end
+
+  # The following is redundant (methods defined on the class&#39;
+  # singleton class are not affected by the public modifier)
+  public
+
+  def self.method3
+  end
+end
+</code></pre>
+
+<h3>Example:</h3>
+
+<pre><code># Lint/UselessAccessModifier:
+#   ContextCreatingMethods:
+#     - concerning
+require &#39;active_support/concern&#39;
+class Foo
+  concerning :Bar do
+    def some_public_method
+    end
+
+    private
+
+    def some_private_method
+    end
+  end
+
+  # this is not redundant because `concerning` created its own context
+  private
+
+  def some_other_private_method
+  end
+end
+</code></pre>
+                </details>
+              <div class="found-in">
+                Found in lib/logstash/inputs/gelf.rb by
+                <a href="https://docs.codeclimate.com/docs/rubocop">rubocop</a>
+              </div>
+            </li>
+            <li
+              data-categories="style"
+              data-engine="rubocop">
+              <h2>Useless assignment to variable - `client`.</h2>
+              <div class="code">
+                <pre class="line-numbers language-ruby"
+                     data-line="172"
+                     data-start="170"
+                     data-line-offset="169"><code>            @logger.debug? &amp;&amp; @logger.debug(&quot;Gelf (tcp): Ensuring client is closed&quot;)
+            client.close
+            client = nil
+          end
+        end # begin client
+</code></pre>
+              </div>
+                <details>
+                  <summary>Details</summary>
+                  <p>This cop checks for every useless assignment to local variable in every
+scope.
+The basic idea for this cop was from the warning of <code>ruby -cw</code>:</p>
+
+<pre><code>assigned but unused variable - foo
+</code></pre>
+
+<p>Currently this cop has advanced logic that detects unreferenced
+reassignments and properly handles varied cases such as branch, loop,
+rescue, ensure, etc.</p>
+                </details>
+              <div class="found-in">
+                Found in lib/logstash/inputs/gelf.rb by
+                <a href="https://docs.codeclimate.com/docs/rubocop">rubocop</a>
+              </div>
+            </li>
+            <li
+              data-categories="complexity"
+              data-engine="rubocop">
+              <h2>Cyclomatic complexity for tcp_listener is too high. [20/6]</h2>
+              <div class="code">
+                <pre class="line-numbers language-ruby"
+                     data-line="109-178"
+                     data-start="107"
+                     data-line-offset="106"><code>
+  private
+  def tcp_listener(output_queue)
+
+    @logger.warn(&quot;Starting gelf listener (tcp) ...&quot;, :address =&gt; &quot;#{@host}:#{@port}&quot;)
+
+    if @tcp.nil?
+      @tcp = TCPServer.new(@host, @port)
+    end
+
+    while !@shutdown_requested
+      Thread.new(@tcp.accept) do |client|
+        @logger.debug? &amp;&amp; @logger.debug(&quot;Gelf (tcp): Accepting connection from:  #{client.peeraddr[2]}:#{client.peeraddr[1]}&quot;)
+
+        begin
+</code></pre>
+              </div>
+                <details>
+                  <summary>Details</summary>
+                  <p>This cop checks that the cyclomatic complexity of methods is not higher
+than the configured maximum. The cyclomatic complexity is the number of
+linearly independent paths through a method. The algorithm counts
+decision points and adds one.</p>
+
+<p>An if statement (or unless or ?:) increases the complexity by one. An
+else branch does not, since it doesn&#39;t add a decision point. The &amp;&amp;
+operator (or keyword and) can be converted to a nested if statement,
+and ||/or is shorthand for a sequence of ifs, so they also add one.
+Loops can be said to have an exit condition, so they add one.</p>
+                </details>
+              <div class="found-in">
+                Found in lib/logstash/inputs/gelf.rb by
+                <a href="https://docs.codeclimate.com/docs/rubocop">rubocop</a>
+              </div>
+            </li>
+            <li
+              data-categories="complexity"
+              data-engine="rubocop">
+              <h2>Cyclomatic complexity for udp_listener is too high. [7/6]</h2>
+              <div class="code">
+                <pre class="line-numbers language-ruby"
+                     data-line="181-209"
+                     data-start="179"
+                     data-line-offset="178"><code>
+  private
+  def udp_listener(output_queue)
+    @logger.info(&quot;Starting gelf listener (udp)&quot;, :address =&gt; &quot;#{@host}:#{@port}&quot;)
+
+    @udp = UDPSocket.new(Socket::AF_INET)
+    @udp.bind(@host, @port)
+
+    while !stop?
+      line, client = @udp.recvfrom(8192)
+
+      begin
+        data = Gelfd::Parser.parse(line)
+      rescue =&gt; ex
+        @logger.warn(&quot;Gelfd failed to parse a message skipping&quot;, :exception =&gt; ex, :backtrace =&gt; ex.backtrace)
+</code></pre>
+              </div>
+                <details>
+                  <summary>Details</summary>
+                  <p>This cop checks that the cyclomatic complexity of methods is not higher
+than the configured maximum. The cyclomatic complexity is the number of
+linearly independent paths through a method. The algorithm counts
+decision points and adds one.</p>
+
+<p>An if statement (or unless or ?:) increases the complexity by one. An
+else branch does not, since it doesn&#39;t add a decision point. The &amp;&amp;
+operator (or keyword and) can be converted to a nested if statement,
+and ||/or is shorthand for a sequence of ifs, so they also add one.
+Loops can be said to have an exit condition, so they add one.</p>
+                </details>
+              <div class="found-in">
+                Found in lib/logstash/inputs/gelf.rb by
+                <a href="https://docs.codeclimate.com/docs/rubocop">rubocop</a>
+              </div>
+            </li>
+            <li
+              data-categories="complexity"
+              data-engine="rubocop">
+              <h2>Method has too many lines. [53/30]</h2>
+              <div class="code">
+                <pre class="line-numbers language-ruby"
+                     data-line="109-178"
+                     data-start="107"
+                     data-line-offset="106"><code>
+  private
+  def tcp_listener(output_queue)
+
+    @logger.warn(&quot;Starting gelf listener (tcp) ...&quot;, :address =&gt; &quot;#{@host}:#{@port}&quot;)
+
+    if @tcp.nil?
+      @tcp = TCPServer.new(@host, @port)
+    end
+
+    while !@shutdown_requested
+      Thread.new(@tcp.accept) do |client|
+        @logger.debug? &amp;&amp; @logger.debug(&quot;Gelf (tcp): Accepting connection from:  #{client.peeraddr[2]}:#{client.peeraddr[1]}&quot;)
+
+        begin
+</code></pre>
+              </div>
+                <details>
+                  <summary>Details</summary>
+                  <p>This cop checks if the length of a method exceeds some maximum value.
+Comment lines can optionally be ignored.
+The maximum allowed length is configurable.</p>
+                </details>
+              <div class="found-in">
+                Found in lib/logstash/inputs/gelf.rb by
+                <a href="https://docs.codeclimate.com/docs/rubocop">rubocop</a>
+              </div>
+            </li>
+          </ul>
+          <div id="filtered-out-message">All issues have been filtered out</div>
+      </div>
+    </div>
+  </div>
+  </body>
+</html>

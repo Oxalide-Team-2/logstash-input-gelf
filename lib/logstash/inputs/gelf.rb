@@ -83,12 +83,10 @@ class LogStash::Inputs::Gelf < LogStash::Inputs::Base
   public
   def run(output_queue)
     begin
-      # udp server
-      #udp_listener(output_queue)
       if @use_tcp
         tcp_listener(output_queue)
       else
-      udp_listener(output_queue)
+      	udp_listener(output_queue)
       end
     rescue => e
       unless stop?
@@ -101,7 +99,11 @@ class LogStash::Inputs::Gelf < LogStash::Inputs::Base
 
   public
   def stop
-    @udp.close
+      if @use_tcp
+	@tcp.close
+      else
+      	@udp.close
+      end
   rescue IOError # the plugin is currently shutting down, so its safe to ignore theses errors
   end
 
@@ -179,7 +181,7 @@ class LogStash::Inputs::Gelf < LogStash::Inputs::Base
 
   private
   def udp_listener(output_queue)
-    @logger.info("Starting gelf listener", :address => "#{@host}:#{@port}")
+    @logger.info("Starting gelf listener (udp)", :address => "#{@host}:#{@port}")
 
     @udp = UDPSocket.new(Socket::AF_INET)
     @udp.bind(@host, @port)
@@ -248,7 +250,7 @@ class LogStash::Inputs::Gelf < LogStash::Inputs::Base
   # legacy_parse uses the LogStash::Json class to deserialize json
   def self.legacy_parse(json)
     o = LogStash::Json.load(json)
-    LogStash::Event.new(o)
+    LogStash::Event.new(o) if o
   rescue LogStash::Json::ParserError => e
     logger.error(PARSE_FAILURE_LOG_MESSAGE, :error => e, :data => json)
     LogStash::Event.new(MESSAGE_FIELD => json, TAGS_FIELD => [PARSE_FAILURE_TAG, '_legacyjsonparser'])
